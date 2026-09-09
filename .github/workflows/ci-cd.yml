@@ -3,15 +3,13 @@ name: Python and Docker CI
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Check out the repository code
+    # 1. Pull the codebase into the runner
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -21,18 +19,28 @@ jobs:
       with:
         python-version: '3.10'
 
-    # 3. Install dependencies
+    # 3. Install dependencies from requirements.txt
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 4. Optional: Run tests if you have them (e.g., pytest app.py)
-    # - name: Run tests
-    #   run: |
-    #     pytest
+    # 4. Set up Docker Buildx for advanced caching/building
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    # 5. Build the Docker image to make sure the Dockerfile works
-    - name: Build Docker Image
-      run: |
-        docker build -t my-app:latest .
+    # 5. Log in securely to your Docker Hub account
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # 6. Build the container image and upload it to your viki29 registry
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: |
+          viki29/practice:latest
